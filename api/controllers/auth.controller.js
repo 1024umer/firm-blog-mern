@@ -36,3 +36,28 @@ export const signin = async (req, res, next) => {
     errorHandler('Internal Server Error', 500)
   }
 }
+export const google = async (req,res,next)=>{
+  const {name,email,googlePhotoURl} = req.body;
+  try {
+    const user = await User.findOne({email});
+    if(user){
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
+    const { password, ...rest } = user._doc
+    res.status(200).cookie('access_token', token, { httpOnly: true }).json(rest)
+    }else{
+      const generatedPasword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+      const hashedPassword = bcrypt.hashSync(generatedPasword,10)
+      const user = await User.create({ 
+        username:name.toLowerCase().split(' ') + Math.random().toString(9).slice(-4),
+        email,
+        password: hashedPassword,
+        profilePicture:googlePhotoURl 
+      })
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
+      const { password:pass, ...rest } = user._doc
+      res.status(200).cookie('access_token', token, { httpOnly: true }).json(rest)
+    }
+  } catch (error) {
+    next(error);
+  }
+}
